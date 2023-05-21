@@ -10,7 +10,7 @@ from copy import deepcopy
 
 import pygame
 
-from example_grids import GOSPER_GLIDER
+from input_grid import FIELD
 from grid_defs import Grid, Neighbours
 
 WINDOW_WIDTH = 600
@@ -59,8 +59,7 @@ def draw_grid(screen: pygame.Surface, grid: Grid) -> None:
     """
     # cell_width = screen.get_width() / grid.dim.width
     # cell_height = screen.get_height() / grid.dim.height
-    cell_width = 10 
-    cell_height = 10
+    cell_size = 10 
     border_size = 0
 
     for x, y in grid.cells:
@@ -68,10 +67,10 @@ def draw_grid(screen: pygame.Surface, grid: Grid) -> None:
             screen,
             CELL_COLOR,
             (
-                x * cell_width + border_size,
-                y * cell_height + border_size,
-                cell_width - border_size,
-                cell_height - border_size,
+                x * cell_size,
+                y * cell_size,
+                cell_size,
+                cell_size
             ),
         )
     
@@ -88,10 +87,11 @@ def main():
     """
         Main entry point
     """
-    grid = GOSPER_GLIDER
+    grid = FIELD
 
     pygame.init()
     screen = pygame.display.set_mode((600, 400))
+    pygame.display.set_caption('Игра "Жизнь"')
 
     while True:
         if pygame.QUIT in [e.type for e in pygame.event.get()]:
