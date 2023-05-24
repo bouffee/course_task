@@ -16,11 +16,12 @@ WINDOW_HEIGHT = 400
 
 # цвета
 
-GRID_COLOR = (0, 104, 90)
-BACKGROUND_COLOR = (0, 160, 138)
-CELL_COLOR = (246, 0, 24)
-TEXT_COLOR = (255, 207, 115)
-BORDERS_COLOR = (0, 74, 63)
+GRID_COLOR = (230, 230, 230)
+BACKGROUND_COLOR = (253, 246, 227)
+CELL_COLOR = (143, 177, 204)
+TEXT_COLOR = (68, 44, 46)
+BORDERS_COLOR = (204, 153, 102)
+BUTTON_BACKGROUND_COLOR = (255, 221, 187)
 FONT_STYLE = None
 
 def getNeighbours(grid: Grid, x: int, y: int) -> Neighbours:
@@ -96,6 +97,7 @@ def main():
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption('Игра "Жизнь"')
 
+    # переменные состояния
     isRunning = False
     mouseButtonDown = False
     allowCellPlacement = True
@@ -145,7 +147,7 @@ def main():
         drawGrid(screen, grid)
         makeSquares(screen)
 
-        pygame.draw.rect(screen, GRID_COLOR, startGenerationButton_rect)
+        pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, startGenerationButton_rect)
         pygame.draw.rect(screen, BORDERS_COLOR, startGenerationButton_rect, 2)
 
         startGeneration_font = pygame.font.Font(FONT_STYLE, 24)
@@ -162,7 +164,7 @@ def main():
         )
         screen.blit(startGeneration_text_surface, (startGeneration_text_x, startGeneration_text_y))
 
-        pygame.draw.rect(screen, GRID_COLOR, resetButton_rect)
+        pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, resetButton_rect)
         pygame.draw.rect(screen, BORDERS_COLOR, resetButton_rect, 2)
 
         resetButton_font = pygame.font.Font(FONT_STYLE, 24)
