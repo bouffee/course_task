@@ -94,13 +94,14 @@ def main():
     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
 
     pygame.init()
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT + 20))  # Adjusted height for the status code
     pygame.display.set_caption('Игра "Жизнь"')
 
     # переменные состояния
     isRunning = False
     mouseButtonDown = False
     allowCellPlacement = True
+    status = "Заполните поле"  
 
     # Дизайн кнопки "Старт/стоп"
     startGenerationButton_rect = pygame.Rect(WINDOW_WIDTH - 180, 10, 170, 30)
@@ -115,14 +116,16 @@ def main():
             if event.type == pygame.QUIT:
                 sys.exit(0)
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:  # Left mouse button
+                if event.button == 1: 
                     if startGenerationButton_rect.collidepoint(event.pos):
                         isRunning = not isRunning
                         allowCellPlacement = False
+                        status = "Идет генерация" if isRunning else "Пауза"
                     elif resetButton_rect.collidepoint(event.pos):
                         isRunning = False
                         allowCellPlacement = True
                         grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
+                        status = "Заполните поле"
                     else:
                         if allowCellPlacement:
                             mouseButtonDown = True
@@ -134,14 +137,15 @@ def main():
                             else:
                                 grid.cells.add((cell_x, cell_y))
             elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 1:  # Left mouse button
+                if event.button == 1: 
                     mouseButtonDown = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_c:
                     isRunning = False
                     allowCellPlacement = True
                     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
-        
+                    status = "Пауза"
+
         # Заполнение фона, прорисовка сетки, заполнение сетки
         screen.fill(BACKGROUND_COLOR)
         drawGrid(screen, grid)
@@ -175,6 +179,13 @@ def main():
 
         if isRunning:
             grid = updateGrid(grid)
+
+        # Вывод статуса игры вниз экрана. 3 статуса: "заполните поле", "пауза" и "идет генерация" 
+        statusFont = pygame.font.Font(FONT_STYLE, 24)
+        statusText_surface = statusFont.render(status, True, TEXT_COLOR)
+        statusText_x = 10
+        statusText_y = WINDOW_HEIGHT + 3
+        screen.blit(statusText_surface, (statusText_x, statusText_y))
 
         pygame.display.flip()
         time.sleep(0.1)
