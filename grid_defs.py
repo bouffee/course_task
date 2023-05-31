@@ -1,8 +1,13 @@
-"""
-    Grid definitions for the game of life engine.
-"""
 from collections import namedtuple
 
+class Grid:
+    def __init__(self, dim, cells):
+        self.dim = dim
+        self.cells = cells
+
+    def set_dimensions(self, new_dim):
+        self.dim = new_dim
+
+
 Dim = namedtuple("Dimension", ["width", "height"])
-Grid = namedtuple("Grid", ["dim", "cells"])
 Neighbours = namedtuple("Neighbours", ["alive", "dead"])
