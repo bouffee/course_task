@@ -9,9 +9,10 @@ import pygame
 from grid_defs import Grid, Neighbours
 from tkinter import filedialog
 
+iterationNum = 0 # число итераций
+
 # константы
 
-iterationNum = 0 # число итераций
 TIME = 0.3 # время смены кадров
 
 # размеры окна
