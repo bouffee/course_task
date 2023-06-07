@@ -3,14 +3,17 @@ import sys
 import time
 from collections import defaultdict
 from copy import deepcopy
-import os
 
 import pygame
 
 from grid_defs import Grid, Neighbours
-from tkinter import Tk, filedialog
+from tkinter import filedialog
 
 # константы
+
+iterationNum = 0 # число итераций
+TIME = 0.3 # время смены кадров
+
 # размеры окна
 
 WINDOW_WIDTH = 800
@@ -44,8 +47,10 @@ def updateGrid(grid: Grid) -> Grid:
     """
          Для заданной сетки функция возвращает следующую итерацию игры Жизнь.
     """
+    global iterationNum
     newCells = deepcopy(grid.cells)
     undead = defaultdict(int)
+    iterationNum = iterationNum + 1
 
     for x, y in grid.cells:
         aliveNeighbours, deadNeighbours = getNeighbours(grid, x, y)
@@ -95,8 +100,6 @@ def saveToFile(grid: Grid) -> None:
     """
         Сохраняет конфигурацию сетки в файл
     """
-    root = Tk()
-    root.withdraw()
     filename = filedialog.asksaveasfilename(defaultextension=".txt")
     if filename:
         with open(filename, "w") as f:
@@ -107,8 +110,6 @@ def loadFromFile(grid: Grid) -> None:
     """
         Загружает конфигурацию из сохраненного текствого файла
     """
-    root = Tk()
-    root.withdraw()
     filename = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
     if filename:
         with open(filename, "r") as f:
@@ -130,14 +131,15 @@ def main():
     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
 
     pygame.init()
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT + 20))  # Adjusted height for the status code
+    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT + 20))  
     pygame.display.set_caption('Игра "Жизнь"')
 
     # переменные состояния
     isRunning = False
     mouseButtonDown = False
     allowCellPlacement = True
-    status = "Заполните поле"  
+    status = "Заполните поле"
+    global iterationNum
 
     # Дизайн кнопки "Старт/стоп"
     startGenerationButton_rect = pygame.Rect(WINDOW_WIDTH - 180, 10, 170, 30)
@@ -163,8 +165,9 @@ def main():
                     if startGenerationButton_rect.collidepoint(event.pos):
                         isRunning = not isRunning
                         allowCellPlacement = False
-                        status = "Идет генерация" if isRunning else "Пауза"
+                        status = "Идет генерация. Итераций: " if isRunning else "Пауза. Итерация: "
                     elif resetButton_rect.collidepoint(event.pos):
+                        iterationNum = 0
                         isRunning = False
                         allowCellPlacement = True
                         grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
@@ -175,6 +178,7 @@ def main():
                         else:
                             status = "Ошибка: сетка пуста"
                     elif loadFromFileButton_rect.collidepoint(event.pos):
+                        iterationNum = 0
                         loadFromFile(grid)
                     else:
                         if allowCellPlacement:
@@ -194,7 +198,7 @@ def main():
                     isRunning = False
                     allowCellPlacement = True
                     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
-                    status = "Пауза"
+                    status = "Пауза. Итерация: "
 
         # Заполнение фона, прорисовка сетки, заполнение сетки
         screen.fill(BACKGROUND_COLOR)
@@ -244,15 +248,21 @@ def main():
         if isRunning:
             grid = updateGrid(grid)
 
-        # Вывод статуса игры вниз экрана. 3 статуса: "заполните поле", "пауза" и "идет генерация" 
+        # Вывод статуса игры вниз экрана. 3 статуса: "заполните поле", "Пауза. Итерация: " и "Идет генерация. Итерация: " 
         statusFont = pygame.font.Font(FONT_STYLE, 24)
-        statusText_surface = statusFont.render(status, True, TEXT_COLOR)
+
+        # Проверка статуса для вывода числа итераций, если это необходимо
+        if status is "Пауза. Итерация: " or status is "Идет генерация. Итераций: ":
+            statusText_surface = statusFont.render(status + str(iterationNum), True, TEXT_COLOR)
+        else:
+            statusText_surface = statusFont.render(status, True, TEXT_COLOR)
+
         statusText_x = 10
         statusText_y = WINDOW_HEIGHT + 3
         screen.blit(statusText_surface, (statusText_x, statusText_y))
 
         pygame.display.flip()
-        time.sleep(0.1)
+        time.sleep(TIME)
 
 
 if __name__ == "__main__":
