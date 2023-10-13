@@ -34,6 +34,11 @@ FONT_STYLE = None
 # размер  клетки
 
 CELL_SIZE = 15
+GRID_WIDTH = WINDOW_WIDTH // CELL_SIZE
+GRID_HEIGHT = WINDOW_HEIGHT // CELL_SIZE
+MIN_CELL_SIZE = 5  # Минимальный размер ячейки
+MAX_CELL_SIZE = 30  # Максимальный размер ячейки
+SCALE_FACTOR = 1  # Фактор изменения масштаба
 
 def getNeighbours(grid: Grid, x: int, y: int) -> Neighbours:
     """
@@ -132,6 +137,7 @@ def main():
     """
     global WINDOW_HEIGHT
     global WINDOW_WIDTH
+    global GRID_WIDTH, GRID_HEIGHT, CELL_SIZE
 
     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
 
@@ -151,6 +157,13 @@ def main():
             if event.type == pygame.QUIT:
                 sys.exit(0)
             elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 4:  # Колесо вверх (увеличение масштаба)
+                    CELL_SIZE = min(MAX_CELL_SIZE, CELL_SIZE + SCALE_FACTOR)
+                elif event.button == 5:  # Колесо вниз (уменьшение масштаба)
+                    CELL_SIZE = max(MIN_CELL_SIZE, CELL_SIZE - SCALE_FACTOR)
+                    # Добавьте обновление GRID_WIDTH и GRID_HEIGHT, если необходимо
+                GRID_WIDTH = WINDOW_WIDTH // CELL_SIZE
+                GRID_HEIGHT = WINDOW_HEIGHT // CELL_SIZE
                 if event.button == 1: 
                     if startGenerationButton_rect.collidepoint(event.pos):
                         isRunning = not isRunning
