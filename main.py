@@ -136,7 +136,7 @@ def main():
     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
 
     pygame.init()
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT + 20), RESIZABLE)  
+    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), RESIZABLE)  
     pygame.display.set_caption('Игра "Жизнь"')
 
     # переменные состояния
@@ -230,7 +230,7 @@ def main():
         screen.blit(resetButton_text_surface, (resetButton_text_x, resetButton_text_y))
         
         # кнопка "сохранить в файл"
-        saveToFileButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH) , min (WINDOW_HEIGHT * 0.14, 90), 170, 30)
+        saveToFileButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH), min (WINDOW_HEIGHT * 0.14, 90), 170, 30)
         saveToFileButton_text = "Сохранить в файл"
 
         pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, saveToFileButton_rect)
@@ -267,8 +267,13 @@ def main():
         else:
             statusText_surface = statusFont.render(status, True, TEXT_COLOR)
 
-        statusText_x = 10
-        statusText_y = WINDOW_HEIGHT + 3
+        statusText_x = WINDOW_WIDTH * 0.01
+        statusText_y = WINDOW_HEIGHT - statusText_surface.get_height() - 5
+
+        # фон для статус бара
+        status_bar_background = pygame.Surface((WINDOW_WIDTH, statusText_y + 10))
+        status_bar_background.fill(BACKGROUND_COLOR)
+        screen.blit(status_bar_background, (0, statusText_y - 5))
         screen.blit(statusText_surface, (statusText_x, statusText_y))
 
         pygame.display.flip()
