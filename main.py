@@ -5,6 +5,7 @@ from collections import defaultdict
 from copy import deepcopy
 
 import pygame
+from pygame.locals import *
 
 from grid_defs import Grid, Neighbours
 from tkinter import filedialog
@@ -13,7 +14,7 @@ iterationNum = 0 # число итераций
 
 # константы
 
-TIME = 0.3 # время смены кадров
+TIME = 0.1 # время смены кадров
 
 # размеры окна
 
@@ -129,10 +130,13 @@ def main():
     """
         Основная часть
     """
+    global WINDOW_HEIGHT
+    global WINDOW_WIDTH
+
     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
 
     pygame.init()
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT + 20))  
+    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT + 20), RESIZABLE)  
     pygame.display.set_caption('Игра "Жизнь"')
 
     # переменные состояния
@@ -141,21 +145,6 @@ def main():
     allowCellPlacement = True
     status = "Заполните поле"
     global iterationNum
-
-    # Дизайн кнопки "Старт/стоп"
-    startGenerationButton_rect = pygame.Rect(WINDOW_WIDTH - 180, 10, 170, 30)
-    startGenerationButton_text = "Старт/Cтоп"
-
-    # Дизайн кнопки "Сброс"
-    resetButton_rect = pygame.Rect(WINDOW_WIDTH - 180, 50, 170, 30)
-    resetButton_text = "Сброс"
-
-    # Дизайн кнопки "Сохранить в файл"
-    saveToFileButton_rect = pygame.Rect(WINDOW_WIDTH - 180, 90, 170, 30)
-    saveToFileButton_text = "Сохранить в файл"
-
-    loadFromFileButton_rect = pygame.Rect(WINDOW_WIDTH - 180, 130, 170, 30)
-    loadFromFileButton_text = "Загрузить из файла"
 
     while True:
         for event in pygame.event.get():
@@ -200,6 +189,14 @@ def main():
                     allowCellPlacement = True
                     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
                     status = "Пауза. Итерация: "
+            elif event.type == VIDEORESIZE:
+                WINDOW_WIDTH, WINDOW_HEIGHT = event.size
+                screen = pygame.display.set_mode(event.size, RESIZABLE)
+            elif event.type == VIDEOEXPOSE:
+                # screen.blit(pygame.transform.scale(event.dict['size']), (0,0))
+                screen.fill(BACKGROUND_COLOR)
+                makeSquares(screen)
+                pygame.display.update()
 
         # Заполнение фона, прорисовка сетки, заполнение сетки
         screen.fill(BACKGROUND_COLOR)
@@ -207,6 +204,9 @@ def main():
         makeSquares(screen)
 
         # кнопка "старт/стоп"
+        startGenerationButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH) , min(WINDOW_HEIGHT * 0.02, 10), 170, 30)
+        startGenerationButton_text = "Старт/Cтоп"
+        
         pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, startGenerationButton_rect)
         pygame.draw.rect(screen, BORDERS_COLOR, startGenerationButton_rect, 2)
         
@@ -217,6 +217,9 @@ def main():
         screen.blit(startGeneration_text_surface, (startGeneration_text_x, startGeneration_text_y))
         
         #кнопка "сброс"
+        resetButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH) , min(WINDOW_HEIGHT * 0.08, 50), 170, 30)
+        resetButton_text = "Сброс"
+
         pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, resetButton_rect)
         pygame.draw.rect(screen, BORDERS_COLOR, resetButton_rect, 2)
 
@@ -227,6 +230,9 @@ def main():
         screen.blit(resetButton_text_surface, (resetButton_text_x, resetButton_text_y))
         
         # кнопка "сохранить в файл"
+        saveToFileButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH) , min (WINDOW_HEIGHT * 0.14, 90), 170, 30)
+        saveToFileButton_text = "Сохранить в файл"
+
         pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, saveToFileButton_rect)
         pygame.draw.rect(screen, BORDERS_COLOR, saveToFileButton_rect, 2)
 
@@ -237,6 +243,9 @@ def main():
         screen.blit(saveToFile_text_surface, (saveToFile_text_x, saveToFile_text_y))
         
         # кнопка "загрузить из файла"
+        loadFromFileButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH) , min(WINDOW_HEIGHT * 0.2, 130), 170, 30)
+        loadFromFileButton_text = "Загрузить из файла"
+
         pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, loadFromFileButton_rect)
         pygame.draw.rect(screen, BORDERS_COLOR, loadFromFileButton_rect, 2)
 
