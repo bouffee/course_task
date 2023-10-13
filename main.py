@@ -10,12 +10,6 @@ from pygame.locals import *
 from grid_defs import Grid, Neighbours
 from tkinter import filedialog
 
-iterationNum = 0 # число итераций
-
-# константы
-
-TIME = 0.1 # время смены кадров
-
 # размеры окна
 
 WINDOW_WIDTH = 800
@@ -31,14 +25,14 @@ BORDERS_COLOR = (204, 153, 102)
 BUTTON_BACKGROUND_COLOR = (255, 221, 187)
 FONT_STYLE = None
 
-# размер  клетки
+# константы
 
+iterationNum = 0 # число итераций
+TIME = 0.1 # время смены кадров
 CELL_SIZE = 15
-GRID_WIDTH = WINDOW_WIDTH // CELL_SIZE
-GRID_HEIGHT = WINDOW_HEIGHT // CELL_SIZE
-MIN_CELL_SIZE = 5  # Минимальный размер ячейки
-MAX_CELL_SIZE = 30  # Максимальный размер ячейки
-SCALE_FACTOR = 1  # Фактор изменения масштаба
+MIN_CELL_SIZE = 10 
+MAX_CELL_SIZE = 50  
+SCALE_FACTOR = 1  
 
 def getNeighbours(grid: Grid, x: int, y: int) -> Neighbours:
     """
@@ -130,14 +124,24 @@ def loadFromFile(grid: Grid) -> None:
             grid.dim = (WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10)
             grid.cells = newCells
 
+def drawButton(screen, rect, text, textSize = 24) :
+    """
+    Универсальная функция для прорисовки кнопок
+    """
+    pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, rect)
+    pygame.draw.rect(screen, BORDERS_COLOR, rect, 2)
+
+    button_font = pygame.font.Font(FONT_STYLE, textSize)
+    text_surface = button_font.render(text, True, TEXT_COLOR)
+    text_x = rect.x + (rect.width - text_surface.get_width()) // 2
+    text_y = rect.y + (rect.height - text_surface.get_height()) // 2
+    screen.blit(text_surface, (text_x, text_y))
 
 def main():
     """
         Основная часть
     """
-    global WINDOW_HEIGHT
-    global WINDOW_WIDTH
-    global GRID_WIDTH, GRID_HEIGHT, CELL_SIZE
+    global CELL_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT
 
     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
 
@@ -147,7 +151,6 @@ def main():
 
     # переменные состояния
     isRunning = False
-    mouseButtonDown = False
     allowCellPlacement = True
     status = "Заполните поле"
     global iterationNum
@@ -157,15 +160,12 @@ def main():
             if event.type == pygame.QUIT:
                 sys.exit(0)
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 4:  # Колесо вверх (увеличение масштаба)
+                if event.button == 4:  # Колесо вверх 
                     CELL_SIZE = min(MAX_CELL_SIZE, CELL_SIZE + SCALE_FACTOR)
-                elif event.button == 5:  # Колесо вниз (уменьшение масштаба)
+                elif event.button == 5:  # Колесо вниз
                     CELL_SIZE = max(MIN_CELL_SIZE, CELL_SIZE - SCALE_FACTOR)
-                    # Добавьте обновление GRID_WIDTH и GRID_HEIGHT, если необходимо
-                GRID_WIDTH = WINDOW_WIDTH // CELL_SIZE
-                GRID_HEIGHT = WINDOW_HEIGHT // CELL_SIZE
                 if event.button == 1: 
-                    if startGenerationButton_rect.collidepoint(event.pos):
+                    if startButton_rect.collidepoint(event.pos):
                         isRunning = not isRunning
                         allowCellPlacement = False
                         status = "Идет генерация. Итераций: " if isRunning else "Пауза. Итерация: "
@@ -185,7 +185,7 @@ def main():
                         loadFromFile(grid)
                     else:
                         if allowCellPlacement:
-                            mouseButtonDown = True
+                            
                             mousePos = pygame.mouse.get_pos()
                             cell_x = mousePos[0] // CELL_SIZE
                             cell_y = mousePos[1] // CELL_SIZE
@@ -193,9 +193,6 @@ def main():
                                 grid.cells.remove((cell_x, cell_y))
                             else:
                                 grid.cells.add((cell_x, cell_y))
-            elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 1: 
-                    mouseButtonDown = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_c:
                     isRunning = False
@@ -217,56 +214,24 @@ def main():
         makeSquares(screen)
 
         # кнопка "старт/стоп"
-        startGenerationButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH) , min(WINDOW_HEIGHT * 0.02, 10), 170, 30)
-        startGenerationButton_text = "Старт/Cтоп"
+        startButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH), min(WINDOW_HEIGHT * 0.02, 10), 170, 30)
+        startButton_text = "Старт/Cтоп"
+        drawButton(screen, startButton_rect, startButton_text)
         
-        pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, startGenerationButton_rect)
-        pygame.draw.rect(screen, BORDERS_COLOR, startGenerationButton_rect, 2)
-        
-        startGeneration_font = pygame.font.Font(FONT_STYLE, 24)
-        startGeneration_text_surface = startGeneration_font.render(startGenerationButton_text, True, TEXT_COLOR)
-        startGeneration_text_x = (startGenerationButton_rect.x + (startGenerationButton_rect.width - startGeneration_text_surface.get_width()) // 2)
-        startGeneration_text_y = (startGenerationButton_rect.y + (startGenerationButton_rect.height - startGeneration_text_surface.get_height()) // 2)
-        screen.blit(startGeneration_text_surface, (startGeneration_text_x, startGeneration_text_y))
-        
-        #кнопка "сброс"
-        resetButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH) , min(WINDOW_HEIGHT * 0.08, 50), 170, 30)
+        # кнопка "сброс"
+        resetButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH), min(WINDOW_HEIGHT * 0.08, 50), 170, 30)
         resetButton_text = "Сброс"
-
-        pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, resetButton_rect)
-        pygame.draw.rect(screen, BORDERS_COLOR, resetButton_rect, 2)
-
-        resetButton_font = pygame.font.Font(FONT_STYLE, 24)
-        resetButton_text_surface = resetButton_font.render(resetButton_text, True, TEXT_COLOR)
-        resetButton_text_x = resetButton_rect.x + (resetButton_rect.width - resetButton_text_surface.get_width()) // 2
-        resetButton_text_y = resetButton_rect.y + (resetButton_rect.height - resetButton_text_surface.get_height()) // 2
-        screen.blit(resetButton_text_surface, (resetButton_text_x, resetButton_text_y))
+        drawButton(screen, resetButton_rect, resetButton_text)
         
         # кнопка "сохранить в файл"
         saveToFileButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH), min (WINDOW_HEIGHT * 0.14, 90), 170, 30)
         saveToFileButton_text = "Сохранить в файл"
-
-        pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, saveToFileButton_rect)
-        pygame.draw.rect(screen, BORDERS_COLOR, saveToFileButton_rect, 2)
-
-        saveToFile_font = pygame.font.Font(FONT_STYLE, 24)
-        saveToFile_text_surface = saveToFile_font.render(saveToFileButton_text, True, TEXT_COLOR)
-        saveToFile_text_x = saveToFileButton_rect.x + (saveToFileButton_rect.width - saveToFile_text_surface.get_width()) // 2
-        saveToFile_text_y = saveToFileButton_rect.y + (saveToFileButton_rect.height - saveToFile_text_surface.get_height()) // 2
-        screen.blit(saveToFile_text_surface, (saveToFile_text_x, saveToFile_text_y))
+        drawButton(screen, saveToFileButton_rect, saveToFileButton_text)
         
         # кнопка "загрузить из файла"
         loadFromFileButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH) , min(WINDOW_HEIGHT * 0.2, 130), 170, 30)
         loadFromFileButton_text = "Загрузить из файла"
-
-        pygame.draw.rect(screen, BUTTON_BACKGROUND_COLOR, loadFromFileButton_rect)
-        pygame.draw.rect(screen, BORDERS_COLOR, loadFromFileButton_rect, 2)
-
-        loadFromFileButton_font = pygame.font.Font(FONT_STYLE, 24)
-        loadFromFileButton_text_surface = loadFromFileButton_font.render(loadFromFileButton_text, True, TEXT_COLOR)
-        loadFromFileButton_text_x = loadFromFileButton_rect.x + (loadFromFileButton_rect.width - loadFromFileButton_text_surface.get_width()) // 2
-        loadFromFileButton_text_y = loadFromFileButton_rect.y + (loadFromFileButton_rect.height - loadFromFileButton_text_surface.get_height()) // 2
-        screen.blit(loadFromFileButton_text_surface, (loadFromFileButton_text_x, loadFromFileButton_text_y))
+        drawButton(screen, loadFromFileButton_rect, loadFromFileButton_text)
 
         if isRunning:
             grid = updateGrid(grid)
