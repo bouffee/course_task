@@ -32,7 +32,15 @@ TIME = 0.1 # время смены кадров
 CELL_SIZE = 15
 MIN_CELL_SIZE = 10 
 MAX_CELL_SIZE = 50  
-SCALE_FACTOR = 1  
+SCALE_FACTOR = 1
+visible_offset_x = 0
+visible_offset_y = 0
+
+
+def get_cyclic_coordinates(x, y, width, height):
+    # Функция возвращает циклические координаты клетки
+    return x % width, y % height
+
 
 def getNeighbours(grid: Grid, x: int, y: int) -> Neighbours:
     """
@@ -66,7 +74,6 @@ def updateGrid(grid: Grid) -> Grid:
 
     return Grid(grid.dim, newCells)
 
-
 def drawGrid(screen: pygame.Surface, grid: Grid) -> None:
     """
         Эта функция рисует игру Жизнь на заданной поверхности pygame.Surface.
@@ -83,7 +90,6 @@ def drawGrid(screen: pygame.Surface, grid: Grid) -> None:
             ),
         )
 
-
 def makeSquares(surface: pygame.Surface):
     """
         Рисует сетку на поле
@@ -95,7 +101,6 @@ def makeSquares(surface: pygame.Surface):
             shapeSurf = pygame.Surface(rect.size, pygame.SRCALPHA)
             pygame.draw.rect(surface, GRID_COLOR, rect, 1)
     surface.blit(shapeSurf, rect)
-
 
 def saveToFile(grid: Grid) -> None:
     """
@@ -136,6 +141,29 @@ def drawButton(screen, rect, text, textSize = 24) :
     text_x = rect.x + (rect.width - text_surface.get_width()) // 2
     text_y = rect.y + (rect.height - text_surface.get_height()) // 2
     screen.blit(text_surface, (text_x, text_y))
+
+
+def handleKeyDown(key, grid: Grid) -> None:
+    keys = pygame.key.get_pressed()
+    keys = pygame.key.get_pressed()
+    cells_to_remove = set()  # Создаем множество для отложенного удаления, чтобы избежать ошибок изменения размера во время итерации
+    cells_to_add = set()  # Создаем множество для отложенного добавления
+    for cell in grid.cells:
+        x, y = cell
+        if key == pygame.K_UP:
+            cells_to_remove.add(cell)
+            cells_to_add.add((x, y - 1))
+        if key == pygame.K_DOWN:
+            cells_to_remove.add(cell)
+            cells_to_add.add((x, y + 1))
+        if key == pygame.K_LEFT:
+            cells_to_remove.add(cell)
+            cells_to_add.add((x - 1, y))
+        if key == pygame.K_RIGHT:
+            cells_to_remove.add(cell)
+            cells_to_add.add((x + 1, y))
+    grid.cells -= cells_to_remove
+    grid.cells |= cells_to_add
 
 def main():
     """
@@ -194,11 +222,7 @@ def main():
                             else:
                                 grid.cells.add((cell_x, cell_y))
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_c:
-                    isRunning = False
-                    allowCellPlacement = True
-                    grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
-                    status = "Пауза. Итерация: "
+                handleKeyDown(event.key, grid)
             elif event.type == VIDEORESIZE:
                 WINDOW_WIDTH, WINDOW_HEIGHT = event.size
                 screen = pygame.display.set_mode(event.size, RESIZABLE)
