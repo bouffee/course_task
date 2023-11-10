@@ -1,5 +1,6 @@
 # используемые модули
 import sys
+import os
 import time
 from collections import defaultdict
 from copy import deepcopy
@@ -8,7 +9,8 @@ import pygame
 from pygame.locals import *
 
 from grid_defs import Grid, Neighbours
-from tkinter import filedialog
+from RLEdecode import decodeRLE
+from tkinter import Tk, filedialog, simpledialog
 
 # размеры окна
 
@@ -33,13 +35,11 @@ CELL_SIZE = 15
 MIN_CELL_SIZE = 10 
 MAX_CELL_SIZE = 50  
 SCALE_FACTOR = 1
-visible_offset_x = 0
-visible_offset_y = 0
-
-
-def get_cyclic_coordinates(x, y, width, height):
-    # Функция возвращает циклические координаты клетки
-    return x % width, y % height
+# вспомогательные константы для реализации долго нажатия на стрелки для передвижения по карте игры
+MOVING_LEFT = False
+MOVING_RIGHT = False
+MOVING_UP = False
+MOVING_DOWN = False
 
 
 def getNeighbours(grid: Grid, x: int, y: int) -> Neighbours:
@@ -129,6 +129,20 @@ def loadFromFile(grid: Grid) -> None:
             grid.dim = (WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10)
             grid.cells = newCells
 
+def uploadRLEcode(grid: Grid) -> None:
+    """
+    Загрузка игрового поля посредством ввода RLE-кода, который широко используется в сообществе игры
+    """
+    filename = filedialog.askopenfilename(filetypes=[("Text Files", "*.rle")])
+    grid.cells = set() # очищаем поле перед вставкой
+    if filename:
+        with open(filename, "r") as f:
+            line = f.readlines()
+            print (line)
+            decodedGrid = decodeRLE(line[len(line)-1])
+            if decodedGrid:
+                grid.cells = set(decodedGrid)
+
 def drawButton(screen, rect, text, textSize = 24) :
     """
     Универсальная функция для прорисовки кнопок
@@ -142,15 +156,15 @@ def drawButton(screen, rect, text, textSize = 24) :
     text_y = rect.y + (rect.height - text_surface.get_height()) // 2
     screen.blit(text_surface, (text_x, text_y))
 
-
 def handleKeyDown(key, grid: Grid) -> None:
-    keys = pygame.key.get_pressed()
-    keys = pygame.key.get_pressed()
+    """
+    Обработка движения поля
+    """
     cells_to_remove = set()  # Создаем множество для отложенного удаления, чтобы избежать ошибок изменения размера во время итерации
     cells_to_add = set()  # Создаем множество для отложенного добавления
     for cell in grid.cells:
         x, y = cell
-        if key == pygame.K_UP:
+        if key == pygame.K_UP:         
             cells_to_remove.add(cell)
             cells_to_add.add((x, y - 1))
         if key == pygame.K_DOWN:
@@ -169,12 +183,15 @@ def main():
     """
         Основная часть
     """
-    global CELL_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT
+    global CELL_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT, MOVING_DOWN, MOVING_LEFT, MOVING_RIGHT, MOVING_UP
 
     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
 
     pygame.init()
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), RESIZABLE)  
+    # currentDir = os.path.dirname(os.path.abspath(__file__))
+    # iconPath = os.path.join(currentDir, "resources", "icon.png")
+    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), RESIZABLE)
+    # pygame.display.set_icon(pygame.image.load(iconPath))
     pygame.display.set_caption('Игра "Жизнь"')
 
     # переменные состояния
@@ -211,6 +228,9 @@ def main():
                     elif loadFromFileButton_rect.collidepoint(event.pos):
                         iterationNum = 0
                         loadFromFile(grid)
+                    elif loadRLE_rect.collidepoint(event.pos):
+                        iterationNum = 0
+                        uploadRLEcode(grid)
                     else:
                         if allowCellPlacement:
                             
@@ -222,7 +242,23 @@ def main():
                             else:
                                 grid.cells.add((cell_x, cell_y))
             elif event.type == pygame.KEYDOWN:
-                handleKeyDown(event.key, grid)
+                if event.key == pygame.K_LEFT:
+                    MOVING_LEFT = True
+                elif event.key == pygame.K_RIGHT:
+                    MOVING_RIGHT = True
+                elif event.key == pygame.K_UP:
+                    MOVING_UP = True
+                elif event.key == pygame.K_DOWN:
+                    MOVING_DOWN = True
+            elif event.type == pygame.KEYUP:
+                if event.key == pygame.K_LEFT:
+                    MOVING_LEFT = False
+                elif event.key == pygame.K_RIGHT:
+                    MOVING_RIGHT = False
+                elif event.key == pygame.K_UP:
+                    MOVING_UP = False
+                elif event.key == pygame.K_DOWN:
+                    MOVING_DOWN = False
             elif event.type == VIDEORESIZE:
                 WINDOW_WIDTH, WINDOW_HEIGHT = event.size
                 screen = pygame.display.set_mode(event.size, RESIZABLE)
@@ -232,6 +268,15 @@ def main():
                 makeSquares(screen)
                 pygame.display.update()
 
+        if MOVING_LEFT:
+            handleKeyDown(pygame.K_LEFT, grid)
+        elif MOVING_RIGHT:
+            handleKeyDown(pygame.K_RIGHT, grid)
+        elif MOVING_UP:
+            handleKeyDown(pygame.K_UP, grid)
+        elif MOVING_DOWN:
+            handleKeyDown(pygame.K_DOWN, grid)
+        
         # Заполнение фона, прорисовка сетки, заполнение сетки
         screen.fill(BACKGROUND_COLOR)
         drawGrid(screen, grid)
@@ -253,9 +298,14 @@ def main():
         drawButton(screen, saveToFileButton_rect, saveToFileButton_text)
         
         # кнопка "загрузить из файла"
-        loadFromFileButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH) , min(WINDOW_HEIGHT * 0.2, 130), 170, 30)
+        loadFromFileButton_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH), min(WINDOW_HEIGHT * 0.2, 130), 170, 30)
         loadFromFileButton_text = "Загрузить из файла"
         drawButton(screen, loadFromFileButton_rect, loadFromFileButton_text)
+
+        # кнопка "RLE-код"
+        loadRLE_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180)/ WINDOW_WIDTH), min(WINDOW_HEIGHT * 0.26, 170), 170, 30)
+        loadRLE_text = "RLE-код"
+        drawButton(screen, loadRLE_rect, loadRLE_text)
 
         if isRunning:
             grid = updateGrid(grid)
@@ -264,7 +314,7 @@ def main():
         statusFont = pygame.font.Font(FONT_STYLE, 24)
 
         # Проверка статуса для вывода числа итераций, если это необходимо
-        if status is "Пауза. Итерация: " or status is "Идет генерация. Итераций: ":
+        if status == "Пауза. Итерация: " or status == "Идет генерация. Итераций: ":
             statusText_surface = statusFont.render(status + str(iterationNum), True, TEXT_COLOR)
         else:
             statusText_surface = statusFont.render(status, True, TEXT_COLOR)
