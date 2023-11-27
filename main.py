@@ -4,7 +4,6 @@ import os
 import time
 from collections import defaultdict
 from copy import deepcopy
-
 import pygame
 from pygame.locals import *
 
@@ -134,13 +133,14 @@ def uploadRLEcode(grid: Grid) -> None:
     Загрузка игрового поля посредством ввода RLE-кода, который широко используется в сообществе игры
     """
     filename = filedialog.askopenfilename(filetypes=[("Text Files", "*.rle")])
-    grid.cells = set() # очищаем поле перед вставкой
+    grid.cells = set()
     if filename:
         with open(filename, "r") as f:
             line = f.readlines()
-            print (line)
+            # print (line)
             decodedGrid = decodeRLE(line[len(line)-1])
             if decodedGrid:
+                grid.dim = (WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10)
                 grid.cells = set(decodedGrid)
 
 def drawButton(screen, rect, text, textSize = 24) :
@@ -188,10 +188,7 @@ def main():
     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
 
     pygame.init()
-    # currentDir = os.path.dirname(os.path.abspath(__file__))
-    # iconPath = os.path.join(currentDir, "resources", "icon.png")
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), RESIZABLE)
-    # pygame.display.set_icon(pygame.image.load(iconPath))
     pygame.display.set_caption('Игра "Жизнь"')
 
     # переменные состояния
@@ -218,7 +215,7 @@ def main():
                         iterationNum = 0
                         isRunning = False
                         allowCellPlacement = True
-                        grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
+                        grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set()) # очищение поля
                         status = "Заполните поле"
                     elif saveToFileButton_rect.collidepoint(event.pos):
                         if len(grid.cells) > 0:
@@ -233,7 +230,6 @@ def main():
                         uploadRLEcode(grid)
                     else:
                         if allowCellPlacement:
-                            
                             mousePos = pygame.mouse.get_pos()
                             cell_x = mousePos[0] // CELL_SIZE
                             cell_y = mousePos[1] // CELL_SIZE
