@@ -133,12 +133,17 @@ def uploadRLEcode(grid: Grid) -> None:
     Загрузка игрового поля посредством ввода RLE-кода, который широко используется в сообществе игры
     """
     filename = filedialog.askopenfilename(filetypes=[("Text Files", "*.rle")])
-    grid.cells = set()
+    grid.cells = set() # очищаем сетку
     if filename:
         with open(filename, "r") as f:
-            line = f.readlines()
-            # print (line)
-            decodedGrid = decodeRLE(line[len(line)-1])
+            file = f.readlines()
+            selectedLines = str()
+            for line in file:
+                if line[0:1] == "#" or line[0:1] == "x":
+                    continue
+                else:
+                    selectedLines += line.strip()
+            decodedGrid = decodeRLE(selectedLines)
             if decodedGrid:
                 grid.dim = (WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10)
                 grid.cells = set(decodedGrid)
@@ -160,24 +165,24 @@ def handleKeyDown(key, grid: Grid) -> None:
     """
     Обработка движения поля
     """
-    cells_to_remove = set()  # Создаем множество для отложенного удаления, чтобы избежать ошибок изменения размера во время итерации
-    cells_to_add = set()  # Создаем множество для отложенного добавления
+    cellsToRemove = set()  # Создаем множество для отложенного удаления, чтобы избежать ошибок изменения размера во время итерации
+    cellsToAdd = set()  # Создаем множество для отложенного добавления
     for cell in grid.cells:
         x, y = cell
         if key == pygame.K_UP:         
-            cells_to_remove.add(cell)
-            cells_to_add.add((x, y - 1))
+            cellsToRemove.add(cell)
+            cellsToAdd.add((x, y - 1))
         if key == pygame.K_DOWN:
-            cells_to_remove.add(cell)
-            cells_to_add.add((x, y + 1))
+            cellsToRemove.add(cell)
+            cellsToAdd.add((x, y + 1))
         if key == pygame.K_LEFT:
-            cells_to_remove.add(cell)
-            cells_to_add.add((x - 1, y))
+            cellsToRemove.add(cell)
+            cellsToAdd.add((x - 1, y))
         if key == pygame.K_RIGHT:
-            cells_to_remove.add(cell)
-            cells_to_add.add((x + 1, y))
-    grid.cells -= cells_to_remove
-    grid.cells |= cells_to_add
+            cellsToRemove.add(cell)
+            cellsToAdd.add((x + 1, y))
+    grid.cells -= cellsToRemove
+    grid.cells |= cellsToAdd
 
 def main():
     """
