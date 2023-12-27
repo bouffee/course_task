@@ -9,7 +9,8 @@ from pygame.locals import *
 
 from grid_defs import Grid, Neighbours
 from RLEdecode import decodeRLE
-from tkinter import Tk, filedialog, simpledialog
+import tkinter as tk
+from tkinter import filedialog
 
 # размеры окна
 
@@ -31,7 +32,7 @@ FONT_STYLE = None
 iterationNum = 0 # число итераций
 TIME = 0.1 # время смены кадров
 CELL_SIZE = 15
-MIN_CELL_SIZE = 10 
+MIN_CELL_SIZE = 2
 MAX_CELL_SIZE = 50  
 SCALE_FACTOR = 1
 # вспомогательные константы для реализации долго нажатия на стрелки для передвижения по карте игры
@@ -49,7 +50,6 @@ def getNeighbours(grid: Grid, x: int, y: int) -> Neighbours:
     possibleNeighbours = {(x + x_add, y + y_add) for x_add, y_add in offsets}
     alive = {(pos[0], pos[1]) for pos in possibleNeighbours if pos in grid.cells}
     return Neighbours(alive, possibleNeighbours - alive)
-
 
 def updateGrid(grid: Grid) -> Grid:
     """
@@ -115,8 +115,8 @@ def loadFromFile(grid: Grid) -> None:
     """
         Загружает конфигурацию из сохраненного текствого файла
     """
-    filename = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
-    if filename:
+    filename = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt"), ("Text Files", "*.rle")])
+    if filename and filename.endswith(".txt"):
         with open(filename, "r") as f:
             lines = f.readlines()
             newCells = set()
@@ -128,13 +128,7 @@ def loadFromFile(grid: Grid) -> None:
             grid.dim = (WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10)
             grid.cells = newCells
 
-def uploadRLEcode(grid: Grid) -> None:
-    """
-    Загрузка игрового поля посредством ввода RLE-кода, который широко используется в сообществе игры
-    """
-    filename = filedialog.askopenfilename(filetypes=[("Text Files", "*.rle")])
-    grid.cells = set() # очищаем сетку
-    if filename:
+    if filename and filename.endswith(".rle"):
         with open(filename, "r") as f:
             file = f.readlines()
             selectedLines = str()
@@ -146,7 +140,7 @@ def uploadRLEcode(grid: Grid) -> None:
             decodedGrid = decodeRLE(selectedLines)
             if decodedGrid:
                 grid.dim = (WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10)
-                grid.cells = set(decodedGrid)
+                grid.cells = set(decodedGrid)    
 
 def drawButton(screen, rect, text, textSize = 24) :
     """
@@ -184,11 +178,64 @@ def handleKeyDown(key, grid: Grid) -> None:
     grid.cells -= cellsToRemove
     grid.cells |= cellsToAdd
 
+class wrongCellSizeException(Exception):
+    pass
+
+def saveSettings(window, speedScale):
+    global TIME, MIN_CELL_SIZE, MAX_CELL_SIZE
+    TIME = speedScale.get()
+    # MIN_CELL_SIZE = int(minEntry.get())
+    # print(MIN_CELL_SIZE)
+    # MAX_CELL_SIZE = int(maxEntry.get())
+    # print(MAX_CELL_SIZE)
+    # if MIN_CELL_SIZE == 0:
+    #     # MIN_CELL_SIZE = 6
+    #     print("here min")
+    #     raise wrongCellSizeException("Размер клетки не может быть 0!")
+    # elif MAX_CELL_SIZE == 0:
+    #     MAX_CELL_SIZE = 50
+    #     print("here max")
+    #     raise wrongCellSizeException("Размер клетки не может быть 0!")
+    # else:
+    #     print("here in else")
+    window.destroy()
+
+def openSettingsWindow():
+    settingsWindow = tk.Tk()
+    settingsWindow.minsize(350, 80)
+    settingsWindow.maxsize(350, 80)
+    
+    speedLabel = tk.Label(settingsWindow, text="Скорость симуляции (меньше = быстрее)")
+    speedLabel.grid(row=0, column=0, sticky='w')
+
+    speedScale = tk.Scale(settingsWindow, from_=0.01, to=1.0, resolution=0.01, orient=tk.HORIZONTAL)
+    speedScale.grid(row=0, column=1, sticky='w')
+
+    # # максимальное значение
+    # maxLabel = tk.Label(settingsWindow, text="Минимальный размер клетки")
+    # maxLabel.grid(row=1, column=0, sticky='w')
+    # maxEntry = tk.Entry(settingsWindow)
+    # maxEntry.insert(0, '6')
+    # maxEntry.grid(row=1, column=1, sticky='w')
+
+    # # минимальное значение
+    # minLabel = tk.Label(settingsWindow, text="Максимальный размер клетки")
+    # minLabel.grid(row=2, column=0, sticky='w')
+    # minEntry = tk.Entry(settingsWindow)
+    # minEntry.insert(0, '50')
+    # minEntry.grid(row=2, column=1, sticky='w') 
+    
+    # кнопка сохранения настроек
+    saveButton = tk.Button(settingsWindow, text="Сохранить", command=lambda: saveSettings(settingsWindow, speedScale))
+    saveButton.grid(row=3, columnspan=2)
+
+    settingsWindow.mainloop()
+
 def main():
     """
         Основная часть
     """
-    global CELL_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT, MOVING_DOWN, MOVING_LEFT, MOVING_RIGHT, MOVING_UP
+    global CELL_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT, MOVING_DOWN, MOVING_LEFT, MOVING_RIGHT, MOVING_UP, TIME
 
     grid = Grid((WINDOW_WIDTH // 10, WINDOW_HEIGHT // 10), set())
 
@@ -207,9 +254,9 @@ def main():
             if event.type == pygame.QUIT:
                 sys.exit(0)
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 4:  # Колесо вверх 
+                if event.button == 4:  # Колесо вниз 
                     CELL_SIZE = min(MAX_CELL_SIZE, CELL_SIZE + SCALE_FACTOR)
-                elif event.button == 5:  # Колесо вниз
+                elif event.button == 5:  # Колесо вверх
                     CELL_SIZE = max(MIN_CELL_SIZE, CELL_SIZE - SCALE_FACTOR)
                 if event.button == 1: 
                     if startButton_rect.collidepoint(event.pos):
@@ -228,11 +275,12 @@ def main():
                         else:
                             status = "Ошибка: сетка пуста"
                     elif loadFromFileButton_rect.collidepoint(event.pos):
+                        isRunning = False
                         iterationNum = 0
                         loadFromFile(grid)
-                    elif loadRLE_rect.collidepoint(event.pos):
-                        iterationNum = 0
-                        uploadRLEcode(grid)
+                    elif settings_rect.collidepoint(event.pos):
+                        isRunning = False
+                        openSettingsWindow()
                     else:
                         if allowCellPlacement:
                             mousePos = pygame.mouse.get_pos()
@@ -303,10 +351,10 @@ def main():
         loadFromFileButton_text = "Загрузить из файла"
         drawButton(screen, loadFromFileButton_rect, loadFromFileButton_text)
 
-        # кнопка "RLE-код"
-        loadRLE_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180)/ WINDOW_WIDTH), min(WINDOW_HEIGHT * 0.26, 170), 170, 30)
-        loadRLE_text = "RLE-код"
-        drawButton(screen, loadRLE_rect, loadRLE_text)
+        # кнопка "Настройки"
+        settings_rect = pygame.Rect(WINDOW_WIDTH * min(0.9, (WINDOW_WIDTH - 180) / WINDOW_WIDTH), min(WINDOW_HEIGHT * 0.26, 170), 170, 30)
+        settings_text = "Настройки"
+        drawButton(screen, settings_rect, settings_text)
 
         if isRunning:
             grid = updateGrid(grid)
