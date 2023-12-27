@@ -14,18 +14,20 @@ def getSequences(line):
 
 def decodeRLE(message):
     lines = message.split("$")
-    print ("Splitted lines are: ", lines)
+    # print ("Splitted lines are: ", lines)
     answer_coordinates = []
     # print(answer_coordinates)
     x_ans = 5
     y_ans = 5
+    enter_num = 1
     for line in lines:
         sequences = getSequences(line)
+        print("sequesnces are:", sequences)
         for seq in sequences:
             if seq[-1] == "o":
                 for i in range(int(seq[:-1])):
                     answer_coordinates.append((x_ans + i, y_ans))
             x_ans += int(seq[:-1])
         x_ans = 5
-        y_ans += 1
+        y_ans += enter_num
     return answer_coordinates
