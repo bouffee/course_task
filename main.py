@@ -2,6 +2,7 @@
 import sys
 import os
 import time
+import re
 from collections import defaultdict
 from copy import deepcopy
 import pygame
@@ -11,6 +12,11 @@ from grid_defs import Grid, Neighbours
 from RLEdecode import decodeRLE
 import tkinter as tk
 from tkinter import filedialog
+
+# Правила игры
+
+ALIVE_NEIGHBOURS = [2, 3]
+REVIVAL_NUMBER = [3]
 
 # размеры окна
 
@@ -62,13 +68,13 @@ def updateGrid(grid: Grid) -> Grid:
 
     for x, y in grid.cells:
         aliveNeighbours, deadNeighbours = getNeighbours(grid, x, y)
-        if len(aliveNeighbours) not in [2, 3]:
+        if len(aliveNeighbours) not in ALIVE_NEIGHBOURS:
             newCells.remove((x, y))
 
         for pos in deadNeighbours:
             undead[pos] += 1
 
-    for pos, _ in filter(lambda elem: elem[1] == 3, undead.items()):
+    for pos, _ in filter(lambda elem: elem[1] in REVIVAL_NUMBER, undead.items()):
         newCells.add((pos[0], pos[1]))
 
     return Grid(grid.dim, newCells)
@@ -178,55 +184,63 @@ def handleKeyDown(key, grid: Grid) -> None:
     grid.cells -= cellsToRemove
     grid.cells |= cellsToAdd
 
-class wrongCellSizeException(Exception):
-    pass
 
-def saveSettings(window, speedScale):
-    global TIME, MIN_CELL_SIZE, MAX_CELL_SIZE
+def saveSettings(window, speedScale, gameRuleForm):
+    global TIME, MIN_CELL_SIZE, MAX_CELL_SIZE, ALIVE_NEIGHBOURS, REVIVAL_NUMBER
     TIME = speedScale.get()
-    # MIN_CELL_SIZE = int(minEntry.get())
-    # print(MIN_CELL_SIZE)
-    # MAX_CELL_SIZE = int(maxEntry.get())
-    # print(MAX_CELL_SIZE)
-    # if MIN_CELL_SIZE == 0:
-    #     # MIN_CELL_SIZE = 6
-    #     print("here min")
-    #     raise wrongCellSizeException("Размер клетки не может быть 0!")
-    # elif MAX_CELL_SIZE == 0:
-    #     MAX_CELL_SIZE = 50
-    #     print("here max")
-    #     raise wrongCellSizeException("Размер клетки не может быть 0!")
-    # else:
-    #     print("here in else")
+
+    parsingString = gameRuleForm.get()
+    match = re.match(r'^B(\d+)/S(\d+)$', parsingString) 
+
+    if not match:
+        errorWindow = tk.Tk()
+        errorWindow.bell()
+        screen_width = errorWindow.winfo_screenwidth()
+        screen_height = errorWindow.winfo_screenheight()
+        x = (screen_width/2) - (350/2)
+        y = (screen_height/2) - (50/2)
+        errorWindow.geometry('%dx%d+%d+%d' % (350, 50, x, y))
+        errorWindow.title("Ошибка!")
+        errorWindow.minsize(350, 50)
+        errorWindow.maxsize(350, 50)
+
+        errorText = tk.Label(errorWindow, text="Некорректный формат строки.\n Пожалуйста, введите правила в формате Bx/Sy.")
+        errorText.place(relx=0.5, rely=0.5, anchor='center')
+    
+    bStr = match.group(1)
+    sStr = match.group(2)
+
+    REVIVAL_NUMBER = [int(char) for char in bStr]
+    ALIVE_NEIGHBOURS = [int(char) for char in sStr]
     window.destroy()
 
 def openSettingsWindow():
     settingsWindow = tk.Tk()
-    settingsWindow.minsize(350, 80)
-    settingsWindow.maxsize(350, 80)
+    settingsWindow.title("Настройки")
+    screen_width = settingsWindow.winfo_screenwidth()
+    screen_height = settingsWindow.winfo_screenheight()
+    x = (screen_width/2) - (380/2)
+    y = (screen_height/2) - (100/2)
+    settingsWindow.geometry('%dx%d+%d+%d' % (380, 100, x, y))
+    settingsWindow.minsize(380, 100)
+    settingsWindow.maxsize(380, 100)
     
-    speedLabel = tk.Label(settingsWindow, text="Скорость симуляции (меньше = быстрее)")
+    speedLabel = tk.Label(settingsWindow, text="Скорость симуляции (меньше = быстрее)",)
     speedLabel.grid(row=0, column=0, sticky='w')
 
-    speedScale = tk.Scale(settingsWindow, from_=0.01, to=1.0, resolution=0.01, orient=tk.HORIZONTAL)
+    speedScale = tk.Scale(settingsWindow, from_=0.01, to=1.0, resolution=0.01, orient=tk.HORIZONTAL, length=122)
     speedScale.grid(row=0, column=1, sticky='w')
 
-    # # максимальное значение
-    # maxLabel = tk.Label(settingsWindow, text="Минимальный размер клетки")
-    # maxLabel.grid(row=1, column=0, sticky='w')
-    # maxEntry = tk.Entry(settingsWindow)
-    # maxEntry.insert(0, '6')
-    # maxEntry.grid(row=1, column=1, sticky='w')
+    gameRuleLabel = tk.Label(settingsWindow, text="Правила для симуляции")
+    gameRuleLabel.grid(row=1, column=0, sticky='w')
 
-    # # минимальное значение
-    # minLabel = tk.Label(settingsWindow, text="Максимальный размер клетки")
-    # minLabel.grid(row=2, column=0, sticky='w')
-    # minEntry = tk.Entry(settingsWindow)
-    # minEntry.insert(0, '50')
-    # minEntry.grid(row=2, column=1, sticky='w') 
+    gameRuleForm = tk.Entry()
+    gameRuleForm.insert(0, f"B{"".join([f"{i}" for i in REVIVAL_NUMBER])}/S{"".join([f"{i}" for i in ALIVE_NEIGHBOURS])}")
+
+    gameRuleForm.grid(row=1, column=1, sticky='w')
     
     # кнопка сохранения настроек
-    saveButton = tk.Button(settingsWindow, text="Сохранить", command=lambda: saveSettings(settingsWindow, speedScale))
+    saveButton = tk.Button(settingsWindow, text="Сохранить", command=lambda: saveSettings(settingsWindow, speedScale, gameRuleForm))
     saveButton.grid(row=3, columnspan=2)
 
     settingsWindow.mainloop()
