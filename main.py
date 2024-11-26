@@ -229,6 +229,7 @@ def openSettingsWindow():
     speedLabel.grid(row=0, column=0, sticky='w')
 
     speedScale = tk.Scale(settingsWindow, from_=0.01, to=1.0, resolution=0.01, orient=tk.HORIZONTAL, length=122)
+    speedScale.set(0.1)
     speedScale.grid(row=0, column=1, sticky='w')
 
     gameRuleLabel = tk.Label(settingsWindow, text="Правила для симуляции")
