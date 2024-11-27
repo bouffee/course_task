@@ -7,6 +7,7 @@ from collections import defaultdict
 from copy import deepcopy
 import pygame
 from pygame.locals import *
+import random
 
 from grid_defs import Grid, Neighbours
 from RLEdecode import decodeRLE
@@ -14,33 +15,35 @@ import tkinter as tk
 from tkinter import filedialog
 
 # Правила игры
-
 ALIVE_NEIGHBOURS = [2, 3]
 REVIVAL_NUMBER = [3]
 
 # размеры окна
-
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 
 # цвета
-
 GRID_COLOR = (230, 230, 230)
 BACKGROUND_COLOR = (253, 246, 227)
 CELL_COLOR = (143, 177, 204)
 TEXT_COLOR = (68, 44, 46)
 BORDERS_COLOR = (204, 153, 102)
 BUTTON_BACKGROUND_COLOR = (255, 221, 187)
+FOOD_COLOR = (141, 205, 137)
+PLAGUE_COLOR = (128, 128, 128)
 FONT_STYLE = None
 
 # константы
-
 iterationNum = 0 # число итераций
 TIME = 0.1 # время смены кадров
 CELL_SIZE = 15
 MIN_CELL_SIZE = 2
 MAX_CELL_SIZE = 50  
 SCALE_FACTOR = 1
+FOOD_MODE = bool(False)
+PLAGUE_MODE = bool(False)
+SPREAD_CHANCE = 0.2
+
 # вспомогательные константы для реализации долго нажатия на стрелки для передвижения по карте игры
 MOVING_LEFT = False
 MOVING_RIGHT = False
@@ -63,12 +66,24 @@ def updateGrid(grid: Grid) -> Grid:
     """
     global iterationNum
     newCells = deepcopy(grid.cells)
+    newDiseased = deepcopy(grid.diseased)
     undead = defaultdict(int)
     iterationNum = iterationNum + 1
 
     for x, y in grid.cells:
         aliveNeighbours, deadNeighbours = getNeighbours(grid, x, y)
-        if len(aliveNeighbours) not in ALIVE_NEIGHBOURS:
+
+        if (PLAGUE_MODE):
+            if (x, y) in grid.diseased:
+                if random.random() < SPREAD_CHANCE:
+                    for nx, ny in aliveNeighbours:
+                        if (nx, ny) not in grid.diseased:
+                            newDiseased.add((nx, ny))
+            newCells.remove((x, y))  
+            continue
+
+        isNearFood = any((fx, fy) in grid.food for fx, fy in aliveNeighbours)
+        if len(aliveNeighbours) not in ALIVE_NEIGHBOURS and not isNearFood:
             newCells.remove((x, y))
 
         for pos in deadNeighbours:
@@ -77,23 +92,26 @@ def updateGrid(grid: Grid) -> Grid:
     for pos, _ in filter(lambda elem: elem[1] in REVIVAL_NUMBER, undead.items()):
         newCells.add((pos[0], pos[1]))
 
-    return Grid(grid.dim, newCells)
+    return Grid(grid.dim, newCells, grid.food, newDiseased)
 
 def drawGrid(screen: pygame.Surface, grid: Grid) -> None:
     """
         Эта функция рисует игру Жизнь на заданной поверхности pygame.Surface.
     """
-    for x, y in grid.cells:
-        pygame.draw.rect(
-            screen,
-            CELL_COLOR,
-            (
-                x * CELL_SIZE,
-                y * CELL_SIZE,
-                CELL_SIZE,
-                CELL_SIZE
-            ),
+    for cell in grid.cells:
+        cell_x, cell_y = cell
+        rect = pygame.Rect(
+            cell_x * CELL_SIZE, cell_y * CELL_SIZE, CELL_SIZE, CELL_SIZE
         )
+
+        # Заражённые клетки серые
+        if cell in grid.diseased:
+            pygame.draw.rect(screen, PLAGUE_COLOR, rect)  # Серый цвет
+        elif cell in grid.food:
+            pygame.draw.rect(screen, FOOD_COLOR, rect)
+        else:
+            pygame.draw.rect(screen, CELL_COLOR, rect)  # Голубой цвет (обычная клетка)
+
 
 def makeSquares(surface: pygame.Surface):
     """
@@ -185,8 +203,19 @@ def handleKeyDown(key, grid: Grid) -> None:
     grid.cells |= cellsToAdd
 
 
-def saveSettings(window, speedScale, gameRuleForm):
-    global TIME, MIN_CELL_SIZE, MAX_CELL_SIZE, ALIVE_NEIGHBOURS, REVIVAL_NUMBER
+def saveSettings(window, speedScale, gameRuleForm, foodMode, plagueMode):
+    global TIME, MIN_CELL_SIZE, MAX_CELL_SIZE, ALIVE_NEIGHBOURS, REVIVAL_NUMBER, PLAGUE_MODE, FOOD_MODE
+    
+    if (foodMode.get()):
+        FOOD_MODE = True
+    else:
+        FOOD_MODE = False
+
+    if (plagueMode.get()):
+        PLAGUE_MODE = True
+    else: 
+        PLAGUE_MODE = False
+
     TIME = speedScale.get()
 
     parsingString = gameRuleForm.get()
@@ -217,13 +246,15 @@ def saveSettings(window, speedScale, gameRuleForm):
 def openSettingsWindow():
     settingsWindow = tk.Tk()
     settingsWindow.title("Настройки")
+    foodMode = tk.BooleanVar(value=False)
+    plagueMode = tk.BooleanVar(value=False)
     screen_width = settingsWindow.winfo_screenwidth()
     screen_height = settingsWindow.winfo_screenheight()
     x = (screen_width/2) - (380/2)
-    y = (screen_height/2) - (100/2)
-    settingsWindow.geometry('%dx%d+%d+%d' % (380, 100, x, y))
-    settingsWindow.minsize(380, 100)
-    settingsWindow.maxsize(380, 100)
+    y = (screen_height/2) - (140/2)
+    settingsWindow.geometry('%dx%d+%d+%d' % (380, 140, x, y))
+    settingsWindow.minsize(380, 140)
+    settingsWindow.maxsize(380, 140)
     
     speedLabel = tk.Label(settingsWindow, text="Скорость симуляции (меньше = быстрее)",)
     speedLabel.grid(row=0, column=0, sticky='w')
@@ -237,14 +268,46 @@ def openSettingsWindow():
 
     gameRuleForm = tk.Entry()
     gameRuleForm.insert(0, f"B{"".join([f"{i}" for i in REVIVAL_NUMBER])}/S{"".join([f"{i}" for i in ALIVE_NEIGHBOURS])}")
-
     gameRuleForm.grid(row=1, column=1, sticky='w')
+
+    foodForm = tk.Checkbutton(settingsWindow, text="Добавить пищу в симуляцию", variable=foodMode)
+    foodForm.grid(row=2, column=0, sticky='w')
+
+    plagueForm = tk.Checkbutton(settingsWindow, text="Добавить болезни в симуляцию", variable=plagueMode)
+    plagueForm.grid(row=3, column=0, sticky='w')
     
     # кнопка сохранения настроек
-    saveButton = tk.Button(settingsWindow, text="Сохранить", command=lambda: saveSettings(settingsWindow, speedScale, gameRuleForm))
-    saveButton.grid(row=3, columnspan=2)
+    saveButton = tk.Button(settingsWindow, text="Сохранить", command=lambda: saveSettings(settingsWindow, speedScale, gameRuleForm, foodMode, plagueMode))
+    saveButton.grid(row=4, columnspan=2)
 
     settingsWindow.mainloop()
+
+def handleFoodPlacement(grid: Grid, pos) -> None:
+    """
+    Добавляет или удаляет еду по щелчку мыши.
+    """
+    cell_x, cell_y = pos[0] // CELL_SIZE, pos[1] // CELL_SIZE
+    if (cell_x, cell_y) in grid.food:
+        grid.food.remove((cell_x, cell_y))
+    else:
+        grid.food.add((cell_x, cell_y))
+
+def handleDiseasePlacement(grid: Grid, pos) -> None:
+    """
+    Делает клетку зараженной по щелчку мыши.
+    """
+    cell_x, cell_y = pos[0] // CELL_SIZE, pos[1] // CELL_SIZE
+    if (cell_x, cell_y) in grid.cells:
+        if (cell_x, cell_y) in grid.diseased:
+            # Убираем болезнь, если она уже есть
+            grid.diseased.remove((cell_x, cell_y))
+        else:
+            # Добавляем болезнь
+            grid.diseased.add((cell_x, cell_y))
+    else:
+        # Чтобы клетка могла быть зараженной, она должна быть живой
+        grid.cells.add((cell_x, cell_y))
+        grid.diseased.add((cell_x, cell_y))
 
 def main():
     """
@@ -299,12 +362,22 @@ def main():
                     else:
                         if allowCellPlacement:
                             mousePos = pygame.mouse.get_pos()
-                            cell_x = mousePos[0] // CELL_SIZE
-                            cell_y = mousePos[1] // CELL_SIZE
-                            if (cell_x, cell_y) in grid.cells:
-                                grid.cells.remove((cell_x, cell_y))
+                            if FOOD_MODE and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                                # Добавляем еду при зажатом Shift
+                                handleFoodPlacement(grid, mousePos)
+                            elif PLAGUE_MODE and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                                # Добавляем болезнь при зажатом Ctrl
+                                handleDiseasePlacement(grid, mousePos)
                             else:
-                                grid.cells.add((cell_x, cell_y))
+                                # По умолчанию добавляем обычную клетку
+                                cell_x = mousePos[0] // CELL_SIZE
+                                cell_y = mousePos[1] // CELL_SIZE
+                                if (cell_x, cell_y) in grid.cells:
+                                    grid.cells.remove((cell_x, cell_y))
+                                    grid.diseased.discard((cell_x, cell_y))  # Удаляем клетку из болезненных, если она есть
+                                else:
+                                    grid.cells.add((cell_x, cell_y))
+
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
                     MOVING_LEFT = True
